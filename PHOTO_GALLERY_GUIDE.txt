@@ -1,0 +1,20 @@
+DELSTAR PROJECT PHOTO GALLERY - ONE-CLICK UPDATER
+
+1. Copy photos into the website's images folder.
+2. Use the existing first photo's name as the base:
+   Automotive_LivitPress_01.jpeg
+   Automotive_LivitPress_02.jpeg
+   Automotive_LivitPress_03.jpg
+   Automotive_LivitPress_04.png
+   Automotive_LivitPress_05.jpeg
+3. Double-click UPDATE_GALLERIES.bat on Windows.
+   Requires Python 3 installed (https://www.python.org/downloads/).
+   Or run: python update_galleries.py
+4. Refresh projects.html in your browser. Gallery thumbnails and Next/Previous work automatically.
+5. Upload the changed projects.html and any new images to your web host.
+
+The updater finds matching numbered photos for existing project tiles, even when extensions differ.
+It updates projects.html automatically and makes a backup called projects.html.bak.
+It does not create new project tiles; projects without an existing photo are skipped.
+It does not delete your photos or change other website pages.
+If your host is online, running the updater locally does not automatically publish the changes.
