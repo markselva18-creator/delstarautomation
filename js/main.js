@@ -247,3 +247,122 @@ function initProjectTabSelector() {
           }
       });
   };
+
+/***************************************************************************/
+
+/* ── Project image gallery: independent galleries for each tile ── */
+(function () {
+  let images = [];
+  let index = 0;
+  let title = '';
+  let lastFocused = null;
+  let touchStartX = null;
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const modal = document.getElementById('projectLightbox');
+    if (!modal) return;
+    const photo = document.getElementById('lightboxImg');
+    const caption = document.getElementById('lightboxCaption');
+    const heading = document.getElementById('lightboxTitle');
+    const thumbs = document.getElementById('lightboxThumbnails');
+    const close = document.getElementById('lightboxClose');
+    const prev = document.getElementById('lightboxPrev');
+    const next = document.getElementById('lightboxNext');
+    const stage = modal.querySelector('.lightbox-stage');
+
+    function render() {
+      if (!images.length) return;
+      photo.src = images[index];
+      photo.alt = `${title} — photo ${index + 1} of ${images.length}`;
+      caption.textContent = `${index + 1} / ${images.length}`;
+      heading.textContent = title;
+      prev.disabled = next.disabled = images.length < 2;
+      thumbs.replaceChildren();
+      images.forEach((src, i) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'lightbox-thumbnail' + (i === index ? ' active' : '');
+        button.setAttribute('aria-label', `Show photo ${i + 1} of ${images.length}`);
+        button.setAttribute('aria-pressed', String(i === index));
+        const img = document.createElement('img');
+        img.src = src;
+        img.alt = '';
+        img.loading = 'lazy';
+        button.appendChild(img);
+        button.addEventListener('click', () => { index = i; render(); });
+        thumbs.appendChild(button);
+      });
+      thumbs.children[index]?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    }
+
+    function move(delta) {
+      if (images.length < 2) return;
+      index = (index + delta + images.length) % images.length;
+      render();
+    }
+
+    function hide() {
+      modal.classList.remove('is-open');
+      modal.setAttribute('aria-hidden', 'true');
+      document.body.classList.remove('lightbox-open');
+      photo.removeAttribute('src');
+      lastFocused?.focus();
+    }
+
+    document.querySelectorAll('.project-card').forEach(card => {
+      const fallback = card.querySelector('.project-thumb img');
+      let gallery = [];
+      try {
+        const parsed = JSON.parse(card.dataset.images || '[]');
+        if (Array.isArray(parsed)) gallery = parsed.filter(x => typeof x === 'string' && x.trim());
+      } catch (error) {
+        console.warn('Invalid project data-images:', card, error);
+      }
+      if (!gallery.length && fallback) gallery = [fallback.getAttribute('src')];
+      if (!gallery.length) return; // No image: don't open an empty popup
+      card.classList.add('has-gallery');
+      card.tabIndex = 0;
+      card.setAttribute('role', 'button');
+      card.setAttribute('aria-label', `View photos of ${card.querySelector('h3')?.textContent?.trim() || 'project'}`);
+      function open() {
+        lastFocused = document.activeElement;
+        images = gallery;
+        title = card.querySelector('h3')?.textContent?.trim() || 'Project photos';
+        index = 0;
+        modal.classList.add('is-open');
+        modal.setAttribute('aria-hidden', 'false');
+        document.body.classList.add('lightbox-open');
+        render();
+        close.focus();
+      }
+      card.addEventListener('click', open);
+      card.addEventListener('keydown', event => {
+        if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); open(); }
+      });
+    });
+
+    close.addEventListener('click', hide);
+    prev.addEventListener('click', () => move(-1));
+    next.addEventListener('click', () => move(1));
+    modal.addEventListener('click', event => { if (event.target === modal) hide(); });
+    document.addEventListener('keydown', event => {
+      if (!modal.classList.contains('is-open')) return;
+      if (event.key === 'Escape') { event.preventDefault(); hide(); }
+      else if (event.key === 'ArrowLeft') { event.preventDefault(); move(-1); }
+      else if (event.key === 'ArrowRight') { event.preventDefault(); move(1); }
+      else if (event.key === 'Tab') {
+        const focusable = [...modal.querySelectorAll('button:not(:disabled)')];
+        const first = focusable[0], last = focusable[focusable.length - 1];
+        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+      }
+    });
+    stage.addEventListener('touchstart', event => { touchStartX = event.changedTouches[0].screenX; }, { passive: true });
+    stage.addEventListener('touchend', event => {
+      if (touchStartX === null) return;
+      const dx = event.changedTouches[0].screenX - touchStartX;
+      if (Math.abs(dx) > 50) move(dx < 0 ? 1 : -1);
+      touchStartX = null;
+    }, { passive: true });
+  });
+})();
